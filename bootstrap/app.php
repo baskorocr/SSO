@@ -16,6 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
+        
+        // Exclude SSO endpoints from CSRF protection
+        $middleware->validateCsrfTokens(except: [
+            'sso/token',
+            'sso/logout',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

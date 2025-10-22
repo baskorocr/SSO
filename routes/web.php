@@ -5,6 +5,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\SsoIdpController;
+use App\Http\Controllers\SsoAdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -75,5 +77,30 @@ Route::get('/buttons/icon', function () {
 Route::get('/buttons/text-icon', function () {
     return view('buttons-showcase.text-icon');
 })->middleware(['auth', 'can:access buttons'])->name('buttons.text-icon');
+
+// SSO Identity Provider routes
+Route::prefix('sso')->name('sso.')->group(function () {
+    Route::get('/test', function() { return 'SSO routes working'; });
+    Route::get('/authorize', [SsoIdpController::class, 'authorize'])->name('authorize');
+    Route::post('/token', [SsoIdpController::class, 'token'])->name('token');
+    Route::get('/userinfo', [SsoIdpController::class, 'userinfo'])->name('userinfo');
+    Route::post('/logout', [SsoIdpController::class, 'logout'])->name('logout');
+    Route::get('/quick-login/{client}', [SsoIdpController::class, 'quickLogin'])->middleware('auth')->name('quick-login');
+    
+    // Admin routes
+    Route::prefix('admin')->name('admin.')->middleware(['auth', 'can:manage roles'])->group(function () {
+        Route::get('/', [SsoAdminController::class, 'index'])->name('index');
+        Route::get('/create', [SsoAdminController::class, 'create'])->name('create');
+        Route::post('/', [SsoAdminController::class, 'store'])->name('store');
+        Route::get('/{client}', [SsoAdminController::class, 'show'])->name('show');
+        Route::get('/{client}/edit', [SsoAdminController::class, 'edit'])->name('edit');
+        Route::put('/{client}', [SsoAdminController::class, 'update'])->name('update');
+        Route::post('/{client}/regenerate-secret', [SsoAdminController::class, 'regenerateSecret'])->name('regenerate-secret');
+        Route::post('/{client}/revoke-tokens', [SsoAdminController::class, 'revokeTokens'])->name('revoke-tokens');
+        Route::post('/{client}/assign-user', [SsoAdminController::class, 'assignUser'])->name('assign-user');
+        Route::delete('/{client}/users/{user}', [SsoAdminController::class, 'removeUser'])->name('remove-user');
+        Route::delete('/{client}', [SsoAdminController::class, 'destroy'])->name('destroy');
+    });
+});
 
 require __DIR__ . '/auth.php';

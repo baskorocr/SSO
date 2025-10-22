@@ -16,7 +16,7 @@
     @can('manage roles')
     <x-sidebar.dropdown
         title="Management"
-        :active="request()->routeIs('role-permissions.*', 'user-management.*', 'permissions.*')"
+        :active="request()->routeIs('role-permissions.*', 'user-management.*', 'permissions.*', 'sso.admin.*')"
     >
         <x-slot name="icon">
             <x-icons.cog class="flex-shrink-0 w-6 h-6" aria-hidden="true" />
@@ -40,6 +40,12 @@
             title="Permission Management"
             href="{{ route('permissions.index') }}"
             :active="request()->routeIs('permissions.*')"
+        />
+
+        <x-sidebar.sublink
+            title="SSO Clients"
+            href="{{ route('sso.admin.index') }}"
+            :active="request()->routeIs('sso.admin.*')"
         />
     </x-sidebar.dropdown>
     @endcan
