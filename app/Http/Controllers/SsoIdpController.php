@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SsoClient;
 use App\Models\SsoAuthorizationCode;
 use App\Models\SsoAccessToken;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -152,6 +153,87 @@ class SsoIdpController extends Controller
             'email_verified' => !is_null($user->email_verified_at),
             'npk' => $user->npk,
         ]);
+    }
+
+    public function autoSyncUsers(Request $request, SsoClient $client)
+    {
+        if (!$client->is_active) {
+            return response()->json(['error' => 'Client is not active'], 400);
+        }
+
+        try {
+            $httpClient = new \GuzzleHttp\Client();
+            
+            // Use first redirect URI as base URL for sync endpoint
+            $redirectUri = $client->redirect_uris[0];
+            $baseUrl = str_replace('/auth/callback', '', $redirectUri);
+            $syncUrl = $baseUrl . '/api/sync-users';
+            
+            // Request to SSO client for user data
+            $response = $httpClient->post($syncUrl, [
+                'json' => [
+                    'client_id' => $client->client_id,
+                    'client_secret' => $client->client_secret,
+                    'action' => 'get_users'
+                ],
+                'timeout' => 30,
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json'
+                ]
+            ]);
+
+            $userData = json_decode($response->getBody(), true);
+            
+            if (!isset($userData['users']) || !is_array($userData['users'])) {
+                return response()->json(['error' => 'Invalid response format from SSO client'], 400);
+            }
+
+            $syncedCount = 0;
+            $errors = [];
+
+            foreach ($userData['users'] as $userInfo) {
+                try {
+                    if (!isset($userInfo['email']) || !isset($userInfo['name'])) {
+                        $errors[] = "Missing required fields for user";
+                        continue;
+                    }
+
+                    
+
+                    $user = User::updateOrCreate(
+                        ['email' => $userInfo['email']],
+                        [
+                            'npk' => $userInfo['npk'] ?? null,
+                            'name' => $userInfo['name'],
+                            'password' => isset($userInfo['password']) ? bcrypt($userInfo['password']) : bcrypt(Str::random(32)),
+                        ]
+                    );
+
+                    // Assign default role if user doesn't have any
+                    if (!$user->hasAnyRole()) {
+                        $user->assignRole('user');
+                    }
+                    
+                    // Link user to SSO client
+                    $user->ssoClients()->syncWithoutDetaching([$client->id]);
+                    
+                    $syncedCount++;
+                } catch (\Exception $e) {
+                    $errors[] = "Failed to sync user {$userInfo['email']}: " . $e->getMessage();
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'synced_count' => $syncedCount,
+                'errors' => $errors,
+                'message' => "Successfully synced {$syncedCount} users"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to connect to SSO client: ' . $e->getMessage()], 500);
+        }
     }
 
     public function logout(Request $request)

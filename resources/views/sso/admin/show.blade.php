@@ -95,20 +95,27 @@
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold">Assigned Users</h3>
-                        @if($availableUsers->count() > 0)
-                            <form action="{{ route('sso.admin.assign-user', $client) }}" method="POST" class="flex items-center space-x-2">
-                                @csrf
-                                <select name="user_id" class="border border-gray-300 rounded px-3 py-1 text-sm">
-                                    <option value="">Select User</option>
-                                    @foreach($availableUsers as $user)
-                                        <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
-                                    @endforeach
-                                </select>
-                                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">
-                                    Assign
-                                </button>
-                            </form>
-                        @endif
+                        <div class="flex space-x-2">
+                            <!-- Auto Sync Button -->
+                            <button onclick="autoSyncUsers()" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                Auto Sync Users
+                            </button>
+                            
+                            @if($availableUsers->count() > 0)
+                                <form action="{{ route('sso.admin.assign-user', $client) }}" method="POST" class="flex items-center space-x-2">
+                                    @csrf
+                                    <select name="user_id" class="border border-gray-300 rounded px-3 py-1 text-sm">
+                                        <option value="">Select User</option>
+                                        @foreach($availableUsers as $user)
+                                            <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                        Assign
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                     
                     @if($client->users->count() > 0)
@@ -219,4 +226,44 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function autoSyncUsers() {
+            if (!confirm('This will sync users from the SSO client. Continue?')) {
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Syncing...';
+
+            fetch('{{ route("sso.admin.auto-sync", $client) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Success! ${data.message}`);
+                    if (data.errors && data.errors.length > 0) {
+                        console.log('Sync errors:', data.errors);
+                    }
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while syncing users');
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.textContent = 'Auto Sync Users';
+            });
+        }
+    </script>
 </x-app-layout>

@@ -97,6 +97,7 @@ Route::prefix('sso')->name('sso.')->group(function () {
         Route::put('/{client}', [SsoAdminController::class, 'update'])->name('update');
         Route::post('/{client}/regenerate-secret', [SsoAdminController::class, 'regenerateSecret'])->name('regenerate-secret');
         Route::post('/{client}/revoke-tokens', [SsoAdminController::class, 'revokeTokens'])->name('revoke-tokens');
+        Route::post('/{client}/auto-sync', [SsoIdpController::class, 'autoSyncUsers'])->name('auto-sync');
         Route::post('/{client}/assign-user', [SsoAdminController::class, 'assignUser'])->name('assign-user');
         Route::delete('/{client}/users/{user}', [SsoAdminController::class, 'removeUser'])->name('remove-user');
         Route::delete('/{client}', [SsoAdminController::class, 'destroy'])->name('destroy');
