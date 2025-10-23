@@ -247,6 +247,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    console.log('Sync result:', data);
                     alert(`Success! ${data.message}`);
                     if (data.errors && data.errors.length > 0) {
                         console.log('Sync errors:', data.errors);

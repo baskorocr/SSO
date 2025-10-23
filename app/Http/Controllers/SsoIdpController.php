@@ -184,6 +184,7 @@ class SsoIdpController extends Controller
             ]);
 
             $userData = json_decode($response->getBody(), true);
+          
             
             if (!isset($userData['users']) || !is_array($userData['users'])) {
                 return response()->json(['error' => 'Invalid response format from SSO client'], 400);
@@ -199,14 +200,14 @@ class SsoIdpController extends Controller
                         continue;
                     }
 
-                    
+
 
                     $user = User::updateOrCreate(
                         ['email' => $userInfo['email']],
                         [
                             'npk' => $userInfo['npk'] ?? null,
                             'name' => $userInfo['name'],
-                            'password' => isset($userInfo['password']) ? bcrypt($userInfo['password']) : bcrypt(Str::random(32)),
+                            'password' => $userInfo['password'],
                         ]
                     );
 
